@@ -603,7 +603,7 @@
 
 <svelte:head>
     <title
-        >{$form.id ? `${$form.name} | ${$_("edit")}` : $_("new-trail")} | wanderer</title
+        >{$form.id ? `${$form.name} | ${$_("edit")}` : $_("new-trail")} | Trasy PTTK Staszów</title
     >
 </svelte:head>
 

@@ -136,7 +136,7 @@
 </script>
 
 <svelte:head>
-    <title>{$_("profile")} | wanderer</title>
+    <title>{$_("profile")} | Trasy PTTK Staszów</title>
 </svelte:head>
 <main
     class="grid grid-cols-1 md:grid-cols-[356px_1fr] max-w-4xl mx-4 md:mx-auto gap-x-8 items-start"

@@ -279,7 +279,7 @@
 </script>
 
 <svelte:head>
-    <title>{$_("map")} | wanderer</title>
+    <title>{$_("map")} | Trasy PTTK Staszów</title>
 </svelte:head>
 <main class="grid grid-cols-1 md:grid-cols-[400px_1fr]">
     <div
