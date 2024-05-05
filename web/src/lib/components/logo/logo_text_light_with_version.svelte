@@ -56,5 +56,5 @@
      y="41.009998"><tspan
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:32px;font-family:'Century Gothic';-inkscape-font-specification:'Century Gothic, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#ffffff;fill-opacity:1"
        id="tspan6312">trasy</tspan></text>
-  <text x="178" y="64" fill="white" font-size="0.75rem">v0.5.0</text>
+  <text x="178" y="64" fill="white" font-size="0.75rem">v0.5.1</text>
 </svg>
