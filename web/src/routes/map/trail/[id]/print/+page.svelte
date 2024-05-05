@@ -313,8 +313,9 @@
 
                     // Logo
                     const logo = new Image();
-                    logo.src = "/imgs/logo_text_dark.png";
-                    const logoRatio = 64 / 212;
+                    // logo.src = "/imgs/logo_text_dark.png";
+                    logo.src = "/imgs/PTTK_staszow_logo_text.png";
+                    const logoRatio = 64 / 176;
                     const logoWidth = 32;
                     const logoHeight = logoWidth * logoRatio;
                     doc.addImage(

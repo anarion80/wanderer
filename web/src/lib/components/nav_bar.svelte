@@ -12,7 +12,7 @@
     import { _, format } from "svelte-i18n";
 
     let navBarItems = [
-        { text: "Home", value: "/" },
+        { text: "Główna", value: "/" },
         { text: $_("trail", { values: { n: 2 } }), value: "/trails" },
         { text: $_("map"), value: "/map" },
     ];

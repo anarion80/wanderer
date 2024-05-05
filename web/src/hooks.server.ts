@@ -51,7 +51,8 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.user = pb.authStore.model
   event.locals.settings = settings
 
-  const lang = settings?.language ?? event.request.headers.get('accept-language')?.split(',')[0]
+  const lang = "pl"
+  // const lang = settings?.language ?? event.request.headers.get('accept-language')?.split(',')[0]
 
   if (lang) {
     locale.set(lang)
