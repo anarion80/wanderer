@@ -1,16 +1,23 @@
-<h4 align="center">
+<div align="center">
+
   <img src="web/static/svgs/logo_text_two_line_dark.svg" height="256" width="256">
 
-  The trail catalogue that makes your GPS data searchable
-</h4>
+  <h4>The trail catalogue that makes your GPS data searchable</h4>
 
-wanderer is a self-hosted trail database. You can upload your recorded tracks and add various metadata to create an easily searchable catalogue. 
+[![Docker Image Version (tag latest semver)](https://img.shields.io/docker/v/flomp/wanderer-web/latest)](https://github.com/Flomp/wanderer/)
+[![GitHub Repo stars](https://img.shields.io/github/stars/flomp/wanderer?style=social)](https://github.com/Flomp/wanderer/)
+[![Buy Me A Coffee](https://img.shields.io/badge/Support-wanderer-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/wanderertrails)
+
+</div>
+
+wanderer is a self-hosted trail database. You can upload your recorded tracks or create new ones and add various metadata to build an easily searchable catalogue. 
 
 ## Core Features
 
 ![Screenshot of wanderer](docs/imgs/features.png)
 
 - Manage your trails
+- Plan new routes
 - Extensive map integration and visualization
 - Share trails with other people and explore theirs
 - Advanced filter and search functionality
@@ -36,6 +43,10 @@ The first startup can take up to 90 seconds after which you can access the front
 
 You can also run wanderer on bare-metal. Check out the [documentation](https://github.com/Flomp/wanderer/wiki/Installation#from-source) for a detailed how-to guide.
 
+## Support wanderer
+
+If you like wanderer and would like to give something back you can donate over [here](https://www.buymeacoffee.com/wanderertrails).
+
 ## Documentation
 
 Please check the [wiki](https://github.com/Flomp/wanderer/wiki) for the complete documentation.
@@ -43,7 +54,7 @@ Please check the [wiki](https://github.com/Flomp/wanderer/wiki) for the complete
 ## Contributing
 
 Help is welcome at any time. If you are not sure where you can start check the [roadmap](https://github.com/users/Flomp/projects/2/views/1) for features in the backlog.
-If you would like to contribute a translation, you can do so [here](https://translate.codeberg.org/projects/wanderer/wanderer/)
+If you would like to contribute a translation, you can do so [here](https://translate.codeberg.org/projects/wanderer/wanderer/).
 
 ## License
 This project is licensed under the AGPLv3 License. See the [LICENSE](LICENSE) file for the full license text.
