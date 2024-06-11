@@ -1,7 +1,3 @@
-<script lang="ts">
-    export let height: number = 64;
-</script>
-
 <svg
    viewBox="0 0 172.76125 63"
    width="172.76125"

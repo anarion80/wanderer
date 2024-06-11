@@ -16,9 +16,3 @@
         <h5 class="font-semibold">Based on <a href="https://github.com/Flomp/wanderer">wanderer</a></h5>
     </div>
 </footer>
-
-<style>
-    footer li:not(:last-child) {
-        margin-bottom: 4px;
-    }
-</style>
