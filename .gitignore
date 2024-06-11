@@ -2,7 +2,6 @@
 .vscode/
 
 db/pocketbase*
-db/go*
 
 search/meilisearch*
 search/data.ms
