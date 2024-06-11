@@ -8,8 +8,10 @@
     import type { Trail } from "$lib/models/trail";
 
     import {
+        comments,
         comments_create,
         comments_delete,
+        comments_index,
         comments_update,
     } from "$lib/stores/comment_store";
     import { currentUser } from "$lib/stores/user_store";
@@ -31,6 +33,7 @@
     import Textarea from "../base/textarea.svelte";
     import CommentCard from "../comment/comment_card.svelte";
     import PhotoGallery from "../photo_gallery.svelte";
+    import TrailShareInfo from "./trail_share_info.svelte";
 
     export let trail: Trail;
     export let mode: "overview" | "map" = "map";
@@ -57,6 +60,10 @@
     let newComment: Comment = new Comment("", 0, "", trail.id ?? "");
     let commentCreateLoading: boolean = false;
     let commentDeleteLoading: boolean = false;
+
+    $: if (activeTab == 4) {
+        fetchComments();
+    }
 
     onMount(async () => {
         if (mode == "overview") {
@@ -93,7 +100,7 @@
                     shadowUrl: "",
                 },
             })
-                .on("loaded", function (e) {                   
+                .on("loaded", function (e) {
                     map.fitBounds(e.target.getBounds());
                 })
                 .addTo(map);
@@ -114,6 +121,10 @@
         goto(`/map/trail/${trail.id!}`);
     }
 
+    async function fetchComments() {
+        await comments_index(trail);
+    }
+
     async function createComment() {
         if (!$currentUser || !trail.id) {
             return;
@@ -128,10 +139,8 @@
                 author: $currentUser!,
             };
 
-            trail.expand.comments_via_trail = [
-                c,
-                ...(trail.expand.comments_via_trail ?? []),
-            ];
+            const newCommentList = [c, ...$comments];
+            comments.set(newCommentList);
         });
 
         commentCreateLoading = false;
@@ -145,21 +154,38 @@
     async function deleteComment(comment: Comment) {
         commentDeleteLoading = true;
         await comments_delete(comment);
-        trail.expand.comments_via_trail =
-            trail.expand.comments_via_trail.filter((c) => c.id !== comment.id);
+        const newCommentList = $comments.filter((c) => c.id !== comment.id);
+        comments.set(newCommentList);
         commentDeleteLoading = false;
     }
 </script>
 
 <div
-    class="trail-info-panel max-w-5xl mx-auto border border-input-border rounded-3xl overflow-x-hidden h-full"
+    class="trail-info-panel max-w-5xl mx-auto border border-input-border rounded-3xl h-full"
 >
-    <div class="trail-info-panel-header sticky -top-44 z-10">
+    <div class="trail-info-panel-header">
         <section class="relative h-80">
-            <img class="w-full h-80" src={thumbnail} alt="" />
+            <img class="w-full h-80 rounded-t-3xl" src={thumbnail} alt="" />
             <div
                 class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
             ></div>
+            {#if trail.public || trail.expand?.trail_share_via_trail?.length}
+                <div
+                    class="flex absolute top-8 right-10 w-8 h-8 rounded-full items-center justify-center bg-white text-primary"
+                >
+                    {#if trail.public}
+                        <span
+                            class="tooltip text-2xl"
+                            data-title={$_("public")}
+                        >
+                            <i class="fa fa-globe"></i>
+                        </span>
+                    {/if}
+                    {#if trail.expand?.trail_share_via_trail?.length}
+                        <TrailShareInfo {trail} large={true}></TrailShareInfo>
+                    {/if}
+                </div>
+            {/if}
             <div
                 class="flex absolute justify-between items-end w-full bottom-8 left-0 px-8 gap-y-4"
             >
@@ -193,7 +219,7 @@
                         </h3>
                     </div>
                 </div>
-                {#if $currentUser && $currentUser.id == trail.author}
+                {#if ($currentUser && $currentUser.id == trail.author) || trail.expand.trail_share_via_trail?.length}
                     <TrailDropdown {trail} {mode}></TrailDropdown>
                 {/if}
             </div>
@@ -239,11 +265,13 @@
             </section>
             <hr class="border-separator" />
         {/if}
-        <section class="trail-info-panel-tabs px-4 py-2 bg-background">
-            <Tabs {tabs} bind:activeTab></Tabs>
-        </section>
     </div>
-    <section class="trail-info-panel-content px-8">
+    <section
+        class="trail-info-panel-tabs px-4 py-2 bg-background sticky top-0"
+    >
+        <Tabs {tabs} bind:activeTab></Tabs>
+    </section>
+    <section class="trail-info-panel-content px-8 overflow-y-scroll" style="height: calc(100% - 420px)">
         <div
             class="grid grid-cols-1 my-4 gap-8"
             class:md:grid-cols-[1fr_18rem]={mode == "overview"}
@@ -324,7 +352,7 @@
                         </div>
                     {/if}
                     <ul class="space-y-4">
-                        {#each trail.expand.comments_via_trail ?? [] as comment}
+                        {#each $comments ?? [] as comment}
                             <li>
                                 <CommentCard
                                     {comment}

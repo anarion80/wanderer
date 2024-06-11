@@ -1,3 +1,19 @@
+# v0.6.1
+## Bug fixes
+- Fixes a bug that would show wrong comments under a trail
+- Fixes an overflow issue in list views
+- Settings are now created properly when signing up with OAuth
+- Fixes a bug that caused properly named trails to get a generic name
+
+# v0.6.0
+## Features
+- You can now share trails with other users by selecting "Share" from the trail contextmenu. You can set the permission level as "View" or "Edit".
+- Adds missing translations
+
+## Bug fixes
+- Fixed a bug that prevented comments from showing up
+- GPX files without a name in the metadata section will now receive a generic name when uploaded through the API
+
 # v0.5.1
 ## Features
 - You can now export trails as GPX or GEOJson files. Optionally you can include photos and summit book entries of the trail. This replaces the "Download GPX" function in previous versions.

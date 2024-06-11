@@ -14,7 +14,7 @@ wanderer is a self-hosted trail database. You can upload your recorded tracks or
 
 ## Core Features
 
-![Screenshot of wanderer](docs/imgs/features.png)
+![Screenshot of wanderer](docs/src/assets/features.png)
 
 - Manage your trails
 - Plan new routes
@@ -41,7 +41,7 @@ The first startup can take up to 90 seconds after which you can access the front
 
 > ⚠️ if you are using wanderer in a production environment make sure to change the MEILI_MASTER_KEY variable.
 
-You can also run wanderer on bare-metal. Check out the [documentation](https://github.com/Flomp/wanderer/wiki/Installation#from-source) for a detailed how-to guide.
+You can also run wanderer on bare-metal. Check out the [documentation](https://wanderer.to/getting-started/installation/#from-source) for a detailed how-to guide.
 
 ## Support wanderer
 
@@ -49,12 +49,12 @@ If you like wanderer and would like to give something back you can donate over [
 
 ## Documentation
 
-Please check the [wiki](https://github.com/Flomp/wanderer/wiki) for the complete documentation.
+Please check the [website](https://wanderer.to) for the complete documentation.
 
 ## Contributing
 
 Help is welcome at any time. If you are not sure where you can start check the [roadmap](https://github.com/users/Flomp/projects/2/views/1) for features in the backlog.
-If you would like to contribute a translation, you can do so [here](https://translate.codeberg.org/projects/wanderer/wanderer/).
+If you would like to contribute a translation, you can do so [here](https://crowdin.com/project/wanderer).
 
 ## License
 This project is licensed under the AGPLv3 License. See the [LICENSE](LICENSE) file for the full license text.

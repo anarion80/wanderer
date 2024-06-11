@@ -1,5 +1,5 @@
+import type { User } from '$lib/models/user';
 import { pb } from '$lib/pocketbase';
-import type { User } from '$lib/stores/user_store';
 import { error, json, type RequestEvent } from '@sveltejs/kit'
 
 export async function GET(event: RequestEvent) {
