@@ -2,8 +2,9 @@
 .vscode/
 
 db/pocketbase*
+db/go*
 
-search/meilisearch
+search/meilisearch*
 search/data.ms
 search/dumps
 
@@ -11,3 +12,5 @@ run.sh
 build*.sh
 
 data/
+
+launch.sh
