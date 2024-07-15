@@ -1,5 +1,6 @@
 <script lang="ts">
     import { page } from "$app/stores";
+    import { Settings } from "$lib/models/settings";
     import type { Trail } from "$lib/models/trail";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
@@ -9,12 +10,12 @@
     import "leaflet/dist/leaflet.css";
     import { createEventDispatcher, onMount } from "svelte";
     import { _ } from "svelte-i18n";
-    import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
+    import Dropdown from "../base/dropdown.svelte";
 
     export let trail: Trail | null;
     export let markers: Marker[] = [];
     export let map: Map | null = null;
-    export let options = {};
+    export let options: any = {};
     export let graticule: AutoGraticule | null = null;
     export let crosshair: boolean = false;
 
@@ -28,7 +29,7 @@
     $: gpxData = trail?.expand.gpx_data;
     $: if (gpxData && controlElevation) {
         controlElevation.updateOptions({
-            autofitBounds: true,
+            autofitBounds: options.autofitBounds ?? true,
         });
         controlElevation.clear();
         controlElevation.load(gpxData);
@@ -42,22 +43,22 @@
         {
             text: $_("altitude"),
             value: "altitude",
-            icon: selectedMetric == "altitude" ? "square-check" : "square",
+            icon: selectedMetric == "altitude" ? "circle-dot" : "circle",
         },
         {
             text: $_("slope"),
             value: "slope",
-            icon: selectedMetric == "slope" ? "square-check" : "square",
+            icon: selectedMetric == "slope" ? "circle-dot" : "circle",
         },
         {
             text: $_("speed"),
             value: "speed",
-            icon: selectedMetric == "speed" ? "square-check" : "square",
+            icon: selectedMetric == "speed" ? "circle-dot" : "circle",
         },
         {
             text: $_("off"),
             value: false,
-            icon: selectedMetric == false ? "square-check" : "square",
+            icon: selectedMetric == false ? "circle-dot" : "circle",
         },
     ];
 
@@ -93,33 +94,39 @@
         );
 
         const topoLayer = L.tileLayer(
-            "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png ",
+            "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
             {
                 attribution: "© OpenStreetMap contributors",
             },
         );
 
-        const baseMaps = {
+        const baseMaps: Record<string, L.TileLayer> = {
             OpenStreetMaps: baseLayer,
             OpenTopoMaps: topoLayer,
-        };
+            ...($page.data.settings as Settings).tilesets?.reduce<
+                Record<string, string>
+            >((t, current) => {
+                t[current.name] = L.tileLayer(current.url);
+                return t;
+            }, {}),
+        };        
 
         L.control.layers(baseMaps).addTo(map);
 
-        switch (localStorage.getItem("layer")) {
-            case "OpenTopoMaps":
-                topoLayer.addTo(map);
-                break;
-            default:
-                baseLayer.addTo(map);
-                break;
+        const layerPreference = localStorage.getItem("layer")
+
+        if (layerPreference && Object.keys(baseMaps).includes(layerPreference)) {
+            baseMaps[layerPreference].addTo(map!)
+        }else {
+            baseLayer.addTo(map)
         }
 
         map!.on("baselayerchange", function (e) {
             localStorage.setItem("layer", e.name);
         });
 
-        const localMetric = localStorage.getItem("gradient") as any ?? "altitude";
+        const localMetric =
+            (localStorage.getItem("gradient") as any) ?? "altitude";
         selectedMetric = localMetric === "false" ? false : localMetric;
 
         const default_elevation_options = {

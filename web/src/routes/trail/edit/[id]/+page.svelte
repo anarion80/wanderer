@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { page } from "$app/stores";
     import { PUBLIC_VALHALLA_URL } from "$env/static/public";
     import Button from "$lib/components/base/button.svelte";
     import Datepicker from "$lib/components/base/datepicker.svelte";
@@ -50,18 +51,18 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { fromKML, fromTCX, gpx2trail } from "$lib/util/gpx_util";
+    import { fromFIT, fromKML, fromTCX, gpx2trail, isFITFile } from "$lib/util/gpx_util";
     import {
         createAnchorMarker,
         createMarkerFromWaypoint,
     } from "$lib/util/leaflet_util";
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import cryptoRandomString from "crypto-random-string";
-    import type { DivIcon, LatLng, LeafletMouseEvent, Map } from "leaflet";
+    import type { DivIcon, LeafletMouseEvent, Map } from "leaflet";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import { backInOut } from "svelte/easing";
-    import { fade, scale } from "svelte/transition";
+    import { scale } from "svelte/transition";
     import { array, number, object, string } from "yup";
 
     export let data: { trail: Trail };
@@ -110,7 +111,10 @@
     let autoRouting = true;
 
     const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
-        initialValues: data.trail,
+        initialValues: {
+            ...data.trail,
+            category: $page.data.settings?.category || $categories[0].id,
+        },
         validationSchema: trailSchema,
         onError: (errors) => {
             if (errors.name) {
@@ -185,7 +189,7 @@
                 show_toast({
                     type: "success",
                     icon: "check",
-                    text: "Trail saved successfully.",
+                    text: $_('trail-saved-successfully'),
                 });
             } catch (e) {
                 console.error(e);
@@ -193,7 +197,7 @@
                 show_toast({
                     type: "error",
                     icon: "close",
-                    text: "Error saving trail.",
+                    text: $_('error-saving-trail'),
                 });
             } finally {
                 loading = false;
@@ -221,7 +225,40 @@
         document.getElementById("fileInput")!.click();
     }
 
-    function handleFileSelection() {
+    async function parseFile(file: File) {
+        const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+        let gpxData = "";
+        const fileContent = await file.text();
+        const fileBuffer = await file.arrayBuffer();
+
+        if (!isFITFile(fileBuffer)) {
+            if (fileContent.includes("http://www.opengis.net/kml")) {
+                gpxData = fromKML(fileContent);
+                gpxFile = new Blob([gpxData], {
+                    type: "application/gpx+xml",
+                });
+                return gpxData;
+            } else if (fileContent.includes("TrainingCenterDatabase")) {
+                gpxData = fromTCX(fileContent);
+                gpxFile = new Blob([gpxData], {
+                    type: "application/gpx+xml",
+                });
+            } else {
+                gpxData = fileContent;
+                gpxFile = file;
+            }
+        } else {
+            gpxData = await fromFIT(fileBuffer);
+            gpxFile = new Blob([gpxData], {
+                type: "application/gpx+xml",
+            });
+        }
+
+        return gpxData;
+    }
+
+    async function handleFileSelection() {
         const selectedFile = (
             document.getElementById("fileInput") as HTMLInputElement
         ).files?.[0];
@@ -235,61 +272,45 @@
         clearRoute();
         drawingActive = false;
         overwriteGPX = false;
-        var reader = new FileReader();
 
-        reader.readAsText(selectedFile);
+        let gpxData = await parseFile(selectedFile);
 
-        reader.onload = async function (e) {
-            let gpxData = "";
-            const fileContent = e.target?.result as string;
-            if (fileContent.includes("http://www.opengis.net/kml")) {
-                gpxData = fromKML(e.target?.result as string);
-                gpxFile = new Blob([gpxData], { type: "application/gpx+xml" });
-            } else if (fileContent.includes("TrainingCenterDatabase")) {
-                gpxData = fromTCX(e.target?.result as string);
-                gpxFile = new Blob([gpxData], { type: "application/gpx+xml" });
-            } else {
-                gpxData = fileContent;
-                gpxFile = selectedFile;
+        try {
+            const parseResult = await gpx2trail(gpxData);
+            $form = parseResult.trail;
+            $form.expand.gpx_data = gpxData;
+            $form.category = $page.data.settings.category || $categories[0].id;
+
+            setRoute(parseResult.gpx);
+            initRouteAnchors(parseResult.gpx);
+
+            for (const waypoint of $form.expand.waypoints) {
+                saveWaypoint(waypoint);
             }
-            try {
-                const parseResult = await gpx2trail(gpxData);
-                $form = parseResult.trail;
-                $form.expand.gpx_data = gpxData;
+        } catch (e) {
+            console.log(e);
 
-                setRoute(parseResult.gpx);
-                initRouteAnchors(parseResult.gpx);
-
-                for (const waypoint of $form.expand.waypoints) {
-                    saveWaypoint(waypoint);
-                }
-            } catch (e) {
-                console.log(e);
-
-                show_toast({
-                    icon: "close",
-                    type: "error",
-                    text: $_("error-reading-file"),
-                });
-                return;
-            }
-            const r = await fetch("/api/v1/search/cities500", {
-                method: "POST",
-                body: JSON.stringify({
-                    q: "",
-                    options: {
-                        filter: [
-                            `_geoRadius(${$form.lat}, ${$form.lon}, 10000)`,
-                        ],
-                        sort: [`_geoPoint(${$form.lat}, ${$form.lon}):asc`],
-                        limit: 1,
-                    },
-                }),
+            show_toast({
+                icon: "close",
+                type: "error",
+                text: $_("error-reading-file"),
             });
-            const closestCity = (await r.json()).hits[0];
+            return;
+        }
+        const r = await fetch("/api/v1/search/cities500", {
+            method: "POST",
+            body: JSON.stringify({
+                q: "",
+                options: {
+                    filter: [`_geoRadius(${$form.lat}, ${$form.lon}, 10000)`],
+                    sort: [`_geoPoint(${$form.lat}, ${$form.lon}):asc`],
+                    limit: 1,
+                },
+            }),
+        });
+        const closestCity = (await r.json()).hits[0];
 
-            $form.location = closestCity.name;
-        };
+        $form.location = closestCity.name;
     }
 
     function clearWaypoints() {
@@ -385,8 +406,8 @@
         savedWaypoint.marker = marker;
     }
 
-    function beforSummitLogModalOpen() {
-        summitLog.set(new SummitLog(new Date().toISOString().split('T')[0]));
+    function beforeSummitLogModalOpen() {
+        summitLog.set(new SummitLog(new Date().toISOString().split("T")[0]));
         openSummitLogModal();
     }
 
@@ -640,7 +661,7 @@
             type="file"
             name="gpx"
             id="fileInput"
-            accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML"
+            accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
             style="display: none;"
             on:change={handleFileSelection}
         />
@@ -745,7 +766,7 @@
             name="category"
             label={$_("category")}
             bind:value={$form.category}
-            items={$categories.map((c) => ({ text: c.name, value: c.id }))}
+            items={$categories.map((c) => ({ text: $_(c.name), value: c.id }))}
         ></Select>
         <Toggle name="public" label={$_("public")} bind:value={$form.public}
         ></Toggle>
@@ -796,7 +817,7 @@
         <button
             class="btn-secondary"
             type="button"
-            on:click={beforSummitLogModalOpen}
+            on:click={beforeSummitLogModalOpen}
             ><i class="fa fa-plus mr-2"></i>{$_("add-entry")}</button
         >
         {#if $lists.length}
