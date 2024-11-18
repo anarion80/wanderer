@@ -17,6 +17,7 @@ func documentFromTrailRecord(r *models.Record, includeShares bool) map[string]in
 		"location":       r.GetString("location"),
 		"distance":       r.GetFloat("distance"),
 		"elevation_gain": r.GetFloat("elevation_gain"),
+		"elevation_loss": r.GetFloat("elevation_loss"),
 		"duration":       r.GetFloat("duration"),
 		"difficulty":     r.Get("difficulty"),
 		"category":       r.Get("category"),
@@ -37,7 +38,7 @@ func documentFromTrailRecord(r *models.Record, includeShares bool) map[string]in
 	return document
 }
 
-func IndexTrail(r *models.Record, client *meilisearch.Client) error {
+func IndexTrail(r *models.Record, client meilisearch.ServiceManager) error {
 	documents := []map[string]interface{}{documentFromTrailRecord(r, true)}
 
 	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
@@ -47,7 +48,7 @@ func IndexTrail(r *models.Record, client *meilisearch.Client) error {
 	return nil
 }
 
-func UpdateTrail(r *models.Record, client *meilisearch.Client) error {
+func UpdateTrail(r *models.Record, client meilisearch.ServiceManager) error {
 	documents := documentFromTrailRecord(r, false)
 
 	if _, err := client.Index("trails").UpdateDocuments(documents); err != nil {
@@ -57,7 +58,7 @@ func UpdateTrail(r *models.Record, client *meilisearch.Client) error {
 	return nil
 }
 
-func UpdateTrailShares(trailId string, shares []string, client *meilisearch.Client) error {
+func UpdateTrailShares(trailId string, shares []string, client meilisearch.ServiceManager) error {
 	documents := []map[string]interface{}{
 		{
 			"id":     trailId,
@@ -70,7 +71,7 @@ func UpdateTrailShares(trailId string, shares []string, client *meilisearch.Clie
 	return nil
 }
 
-func GenerateMeilisearchToken(rules map[string]interface{}, client *meilisearch.Client) (resp string, err error) {
+func GenerateMeilisearchToken(rules map[string]interface{}, client meilisearch.ServiceManager) (resp string, err error) {
 	apiKeyUid := ""
 	apiKey := ""
 

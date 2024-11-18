@@ -1,7 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import Tabs from "$lib/components/base/tabs.svelte";
-    import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import { Comment } from "$lib/models/comment";
@@ -21,9 +20,13 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
+    import {
+        createMarkerFromWaypoint,
+        endIcon,
+        startIcon,
+    } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
-    import type { Icon, Map, Marker } from "leaflet";
+    import type { Map, Marker } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import "photoswipe/style.css";
@@ -33,10 +36,12 @@
     import Textarea from "../base/textarea.svelte";
     import CommentCard from "../comment/comment_card.svelte";
     import PhotoGallery from "../photo_gallery.svelte";
-    import TrailShareInfo from "./trail_share_info.svelte";
+    import ShareInfo from "../share_info.svelte";
+    import SummitLogTable from "../summit_log/summit_log_table.svelte";
+    import { pb } from "$lib/pocketbase";
 
     export let trail: Trail;
-    export let mode: "overview" | "map" = "map";
+    export let mode: "overview" | "map" | "list" = "map";
     export let markers: Marker[] = [];
 
     const tabs = [
@@ -46,6 +51,9 @@
         $_("summit-book"),
         ...($currentUser ? [$_("comment", { values: { n: 2 } })] : []),
     ];
+
+    const trailIsShared =
+        (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
 
     let map: Map;
 
@@ -89,13 +97,9 @@
                     parseElements: ["track", "route"] as any,
                 },
                 marker_options: {
-                    startIcon: L.AwesomeMarkers.icon({
-                        icon: "circle-half-stroke",
-                        prefix: "fa",
-                        markerColor: "cadetblue",
-                        iconColor: "white",
-                    }) as Icon,
+                    startIcon: startIcon() as any,
                     startIconUrl: "",
+                    endIcon: endIcon() as any,
                     endIconUrl: "",
                     shadowUrl: "",
                 },
@@ -115,6 +119,10 @@
 
     function openMarkerPopup(i: number) {
         markers[i].openPopup();
+    }
+
+    function closeMarkerPopup(i: number) {
+        markers[i].closePopup();
     }
 
     async function toggleMapFullScreen() {
@@ -161,28 +169,41 @@
 </script>
 
 <div
-    class="trail-info-panel mx-auto border border-input-border rounded-3xl h-full" style="max-width: min(100%, 64rem);"
+    class="trail-info-panel mx-auto {mode == 'list'
+        ? ''
+        : 'border border-input-border rounded-3xl'} h-full"
+    style="max-width: min(100%, 76rem);"
 >
     <div class="trail-info-panel-header">
         <section class="relative h-80">
-            <img class="w-full h-80 rounded-t-3xl" src={thumbnail} alt="" />
+            <img
+                class="w-full h-80"
+                class:rounded-t-3xl={mode !== "list"}
+                src={thumbnail}
+                alt=""
+            />
             <div
                 class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
             ></div>
-            {#if trail.public || trail.expand?.trail_share_via_trail?.length}
+            {#if (trail.public || trailIsShared) && pb.authStore.model}
                 <div
-                    class="flex absolute top-8 right-10 w-8 h-8 rounded-full items-center justify-center bg-white text-primary"
+                    class="flex absolute top-8 right-6 {trail.public &&
+                    trailIsShared
+                        ? 'w-16'
+                        : 'w-8'} h-8 rounded-full items-center justify-center bg-white text-primary"
                 >
-                    {#if trail.public}
+                    {#if trail.public && pb.authStore.model}
                         <span
                             class="tooltip text-2xl"
+                            class:mr-3={trail.public && trailIsShared}
                             data-title={$_("public")}
                         >
                             <i class="fa fa-globe"></i>
                         </span>
                     {/if}
-                    {#if trail.expand?.trail_share_via_trail?.length}
-                        <TrailShareInfo {trail} large={true}></TrailShareInfo>
+                    {#if trailIsShared}
+                        <ShareInfo type="trail" subject={trail} large={true}
+                        ></ShareInfo>
                     {/if}
                 </div>
             {/if}
@@ -206,6 +227,21 @@
                             )}
                         </h5>
                     {/if}
+                    {#if trail.expand.author}
+                        <p class="my-3">
+                            {$_("by")}
+                            <img
+                                class="rounded-full w-8 aspect-square mx-1 inline"
+                                src={getFileURL(
+                                    trail.expand.author,
+                                    trail.expand.author.avatar,
+                                ) ||
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
+                                alt="avatar"
+                            />
+                            <a class="underline" href="/profile/{trail.expand.author.id}">{trail.expand.author.username}</a>
+                        </p>
+                    {/if}
                     <div class="flex flex-wrap gap-x-8 gap-y-2 mt-4 mr-8">
                         {#if trail.location}
                             <h3 class="text-lg">
@@ -219,19 +255,25 @@
                         </h3>
                     </div>
                 </div>
-                {#if ($currentUser && $currentUser.id == trail.author) || trail.expand.trail_share_via_trail?.length}
+                {#if ($currentUser && $currentUser.id == trail.author) || trail.expand.trail_share_via_trail?.length || trail.public}
                     <TrailDropdown {trail} {mode}></TrailDropdown>
                 {/if}
             </div>
         </section>
         {#if mode == "overview"}
             <section
-                class="grid grid-cols-2 sm:grid-cols-4 gap-y-4 justify-around py-8 border-b border-input-border"
+                class="grid grid-cols-2 sm:grid-cols-5 gap-y-4 justify-around py-8 border-b border-input-border"
             >
                 <div class="flex flex-col items-center">
                     <span>{$_("distance")}</span>
                     <span class="font-semibold text-lg"
                         >{formatDistance(trail.distance)}</span
+                    >
+                </div>
+                <div class="flex flex-col items-center">
+                    <span>{$_("est-duration")}</span>
+                    <span class="font-semibold text-lg"
+                        >{formatTimeHHMM(trail.duration)}</span
                     >
                 </div>
                 <div class="flex flex-col items-center">
@@ -241,16 +283,16 @@
                     >
                 </div>
                 <div class="flex flex-col items-center">
-                    <span>{$_("est-duration")}</span>
+                    <span>{$_("elevation-loss")}</span>
                     <span class="font-semibold text-lg"
-                        >{formatTimeHHMM(trail.duration)}</span
+                        >{formatElevation(trail.elevation_loss)}</span
                     >
                 </div>
                 {#if trail.expand.category}
                     <div class="flex flex-col items-center">
                         <span>{$_("category")}</span>
                         <span class="font-semibold text-lg"
-                            >{trail.expand.category.name}</span
+                            >{$_(trail.expand.category.name)}</span
                         >
                     </div>
                 {/if}
@@ -266,9 +308,7 @@
             <hr class="border-separator" />
         {/if}
     </div>
-    <section
-        class="trail-info-panel-tabs px-4 py-2 bg-background sticky top-0"
-    >
+    <section class="trail-info-panel-tabs px-4 py-2 bg-background sticky top-0">
         <Tabs {tabs} bind:activeTab></Tabs>
     </section>
     <section class="trail-info-panel-content px-8">
@@ -284,7 +324,10 @@
             {#if activeTab == 1}
                 <ul>
                     {#each trail.expand.waypoints ?? [] as waypoint, i}
-                        <li on:mouseenter={() => openMarkerPopup(i)}>
+                        <li
+                            on:mouseenter={() => openMarkerPopup(i)}
+                            on:mouseleave={() => closeMarkerPopup(i)}
+                        >
                             <WaypointCard {waypoint}></WaypointCard>
                         </li>
                     {/each}
@@ -314,11 +357,10 @@
                 </div>
             {/if}
             {#if activeTab == 3}
-                <ul>
-                    {#each trail.expand.summit_logs ?? [] as log}
-                        <li><SummitLogCard {log}></SummitLogCard></li>
-                    {/each}
-                </ul>
+                <div class="overflow-x-auto">
+                    <SummitLogTable summitLogs={trail.expand.summit_logs} showAuthor
+                    ></SummitLogTable>
+                </div>
             {/if}
             {#if activeTab == 4}
                 <div>

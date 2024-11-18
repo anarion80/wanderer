@@ -3,6 +3,69 @@ title: Changelog
 description: What changed in the last patch?
 ---
 
+## v0.11.0
+### Features
+- Other user's profiles can now be viewed
+- The summit log author is now listed in the summit log table
+- The trail author is now listed for every trail
+- Trails can now be filtered by author
+- Users will now receive an error message when they try to upload a photo that is too large
+- Updated 3D Model on front page
+  
+### Bug fixes
+- Waypoints and summit logs of shared trails are now properly displayed
+- Fixes missing translation for trail categories
+- Fixes events in profile calendar
+
+## v0.10.1
+### Features
+- Adds elevation loss to trails. Please note that trails created before this version will have a default elevation loss of 0. Edit & save to update.
+  
+### Bug fixes
+- Fixes bug that caused auto-added summit logs to not have distance, durtaion etc.
+- Fixes error in the auto-upload feature
+- Fixes access permissions for profile page
+- A summit log is now also created automatically when you upload a trail directly
+- Fixes link to the API documentation in footer
+
+## v0.10.0
+### Features
+- A new summit log entry is now added automatically when uploading a new GPX file for a new or existing trail
+- GPX files can now be attached to summit logs
+- Adds a new profile page with filterable statistics derived from summit log GPX data
+- When importing a GPX file the filename will be used as a fallback
+
+## v0.9.0
+### Features
+- Complete visual overhaul of the list page
+- Lists can now be shared with other users
+- Updates visual style for waypoints
+
+### Bug fixes
+- Fixes a bug that caused categories not to load properly on page reload
+- Fixes icon picker suggestions for waypoints
+- Fixes a bug that would prevent public and shared trails from showing up in the overview
+
+## v0.8.2
+### Features
+- The pagination is now available at top and bottom
+- HEIC image format is now supported
+- Exporting only a trail without summit logs or photos will create a single file instead of a ZIP folder
+- The current page is now remembered when navigating back to the trail overview
+
+### Bug fixes
+- Fixed map height when viewing a trail in detail view
+
+## v0.8.1
+### Features
+- Public and shared trails can now be exported and printed
+
+### Bug fixes
+- Correctly adds the xmlns header to exported GPX files
+- Fixes detail view for shared and public trails
+- Fixes bug that caused the default category to be re-applied when editing a trail
+
+
 ## v0.8.0
 ### Features
 - The settings page layout got a complete visual overhaul

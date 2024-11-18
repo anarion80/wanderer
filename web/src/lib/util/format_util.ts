@@ -10,10 +10,10 @@ export function formatTimeHHMM(minutes?: number) {
 
     const h = (minutes - m) / 60;
 
-    return (h < 10 ? "0" : "") + h.toString() + "h " + (m < 10 ? "0" : "") + Math.round(m).toString() + "m";
+    return (h < 10 ? "0" : "") + h.toString() + "h " + (Math.round(m) < 10 ? "0" : "") + Math.round(m).toString() + "m";
 }
 
-export function formatDistance(meters?: number) {
+export function formatDistance(meters?: number) {    
     if (meters === undefined) {
         return "-";
     }
@@ -47,6 +47,22 @@ export function formatElevation(meters?: number) {
         const feet = meters * 3.28084;
 
         return `${Math.round(feet)} ft`;
+    }
+}
+
+export function formatSpeed(speed?: number) {
+    if (speed === undefined) {
+        return "-";
+    }
+
+    const unit = get(page).data.settings?.unit ?? "metric";
+
+    if (unit == "metric") {
+        return `${(speed * 3.6).toFixed(2)} km/h`
+    } else {
+        const mph = speed * 3.6 * 0.621371;
+
+        return `${Math.round(mph)} mp/h`;
     }
 }
 

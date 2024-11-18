@@ -7,4 +7,12 @@ export type User = {
     password: string,
     avatar?: string;
     language?: string;
+    created?: string;
+}
+
+export type UserAnonymous = {
+    id: string,
+    username?: string,
+    avatar?: string;
+    created?: string;
 }

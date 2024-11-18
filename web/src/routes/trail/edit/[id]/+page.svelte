@@ -51,7 +51,13 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { fromFIT, fromKML, fromTCX, gpx2trail, isFITFile } from "$lib/util/gpx_util";
+    import {
+        fromFIT,
+        fromKML,
+        fromTCX,
+        gpx2trail,
+        isFITFile,
+    } from "$lib/util/gpx_util";
     import {
         createAnchorMarker,
         createMarkerFromWaypoint,
@@ -113,7 +119,10 @@
     const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
         initialValues: {
             ...data.trail,
-            category: $page.data.settings?.category || $categories[0].id,
+            category:
+                data.trail.category ||
+                $page.data.settings?.category ||
+                $categories[0].id,
         },
         validationSchema: trailSchema,
         onError: (errors) => {
@@ -189,7 +198,7 @@
                 show_toast({
                     type: "success",
                     icon: "check",
-                    text: $_('trail-saved-successfully'),
+                    text: $_("trail-saved-successfully"),
                 });
             } catch (e) {
                 console.error(e);
@@ -197,7 +206,7 @@
                 show_toast({
                     type: "error",
                     icon: "close",
-                    text: $_('error-saving-trail'),
+                    text: $_("error-saving-trail"),
                 });
             } finally {
                 loading = false;
@@ -276,10 +285,24 @@
         let gpxData = await parseFile(selectedFile);
 
         try {
-            const parseResult = await gpx2trail(gpxData);
+            const parseResult = await gpx2trail(gpxData, selectedFile.name);
             $form = parseResult.trail;
             $form.expand.gpx_data = gpxData;
             $form.category = $page.data.settings.category || $categories[0].id;
+
+            const log = new SummitLog(parseResult.trail.date as string, {
+                distance: $form.distance,
+                elevation_gain: $form.elevation_gain,
+                elevation_loss: $form.elevation_loss,
+                duration: $form.duration ? $form.duration * 60 : undefined,
+            });
+            console.log(selectedFile.type);
+            
+            log.expand.gpx_data = gpxData;
+            const blob = new Blob([gpxData], { type: selectedFile.type });
+            log._gpx = new File([blob], selectedFile.name, { type: selectedFile.type });
+
+            $form.expand.summit_logs.push(log);
 
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);
@@ -413,6 +436,7 @@
 
     function saveSummitLog(e: CustomEvent<SummitLog>) {
         const savedSummitLog = e.detail;
+
         let editedSummitLogIndex = $form.expand.summit_logs.findIndex(
             (s) => s.id == savedSummitLog.id,
         );
@@ -678,7 +702,7 @@
             >
         </div>
 
-        <div class="flex gap-4 justify-around">
+        <div class="grid grid-cols-2 gap-4 justify-around">
             {#if editingBasicInfo}
                 <TextField
                     bind:value={$form.distance}
@@ -686,18 +710,22 @@
                     label={$_("distance")}
                 ></TextField>
                 <TextField
+                    bind:value={$form.duration}
+                    name="duration"
+                    label={$_("est-duration")}
+                ></TextField><TextField
                     bind:value={$form.elevation_gain}
                     name="elevation_gain"
                     label={$_("elevation-gain")}
                 ></TextField>
                 <TextField
-                    bind:value={$form.duration}
-                    name="duration"
-                    label={$_("est-duration")}
+                    bind:value={$form.elevation_loss}
+                    name="elevation_loss"
+                    label={$_("elevation-loss")}
                 ></TextField>
             {:else}
-                <div class="flex flex-col">
-                    <span>{$_("distance")}</span>
+                <div>
+                    <p>{$_("distance")}</p>
                     <span class="font-medium"
                         >{formatDistance($form.distance)}</span
                     >
@@ -707,8 +735,19 @@
                         value={$form.distance}
                     />
                 </div>
-                <div class="flex flex-col">
-                    <span>{$_("elevation-gain")}</span>
+                <div>
+                    <p>{$_("est-duration")}</p>
+                    <span class="font-medium"
+                        >{formatTimeHHMM($form.duration)}</span
+                    >
+                    <input
+                        type="hidden"
+                        name="duration"
+                        value={$form.duration}
+                    />
+                </div>
+                <div>
+                    <p>{$_("elevation-gain")}</p>
                     <span class="font-medium"
                         >{formatElevation($form.elevation_gain)}</span
                     >
@@ -718,15 +757,15 @@
                         value={$form.elevation_gain}
                     />
                 </div>
-                <div class="flex flex-col">
-                    <span>{$_("est-duration")}</span>
+                <div>
+                    <p>{$_("elevation-loss")}</p>
                     <span class="font-medium"
-                        >{formatTimeHHMM($form.duration)}</span
+                        >{formatElevation($form.elevation_loss)}</span
                     >
                     <input
                         type="hidden"
-                        name="duration"
-                        value={$form.duration}
+                        name="elevation_gain"
+                        value={$form.elevation_gain}
                     />
                 </div>
             {/if}
@@ -752,22 +791,28 @@
             label={$_("describe-your-trail")}
             bind:value={$form.description}
         ></Textarea>
-        <Select
-            name="difficulty"
-            label={$_("difficulty")}
-            bind:value={$form.difficulty}
-            items={[
-                { text: $_("easy"), value: "easy" },
-                { text: $_("moderate"), value: "moderate" },
-                { text: $_("difficult"), value: "difficult" },
-            ]}
-        ></Select>
-        <Select
-            name="category"
-            label={$_("category")}
-            bind:value={$form.category}
-            items={$categories.map((c) => ({ text: $_(c.name), value: c.id }))}
-        ></Select>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4">
+            <Select
+                name="difficulty"
+                label={$_("difficulty")}
+                bind:value={$form.difficulty}
+                items={[
+                    { text: $_("easy"), value: "easy" },
+                    { text: $_("moderate"), value: "moderate" },
+                    { text: $_("difficult"), value: "difficult" },
+                ]}
+            ></Select>
+            <Select
+                name="category"
+                label={$_("category")}
+                bind:value={$form.category}
+                items={$categories.map((c) => ({
+                    text: $_(c.name),
+                    value: c.id,
+                }))}
+            ></Select>
+        </div>
+
         <Toggle name="public" label={$_("public")} bind:value={$form.public}
         ></Toggle>
         <hr class="border-separator" />
@@ -808,6 +853,7 @@
                 <li>
                     <SummitLogCard
                         {log}
+                        index={i}
                         mode="edit"
                         on:change={(e) => handleSummitLogMenuClick(log, i, e)}
                     ></SummitLogCard>

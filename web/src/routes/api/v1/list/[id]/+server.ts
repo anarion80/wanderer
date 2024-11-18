@@ -5,7 +5,7 @@ import { error, json, type RequestEvent } from "@sveltejs/kit";
 export async function GET(event: RequestEvent) {
     try {
         const r = await pb.collection('lists')
-            .getOne<List>(event.params.id as string, { expand: "trails,trails.waypoints,trails.category" })
+            .getOne<List>(event.params.id as string, { expand: "trails,trails.waypoints,trails.category,list_share_via_list" })
         return json(r)
     } catch (e: any) {
         throw error(e.status, e);

@@ -8,7 +8,7 @@ import Waypoint from './waypoint';
 const defaultAttributes = {
   version: '1.1',
   creator: 'wanderer',
-  xmlns: 'http://www.topografix.com/GPX/1/1',
+  'xmlns:prod': 'http://www.topografix.com/GPX/1/1',
   'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
   'xsi:schemaLocation':
     'http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd'
@@ -18,7 +18,7 @@ export default class GPX {
   $: {
     version: string;
     creator: string;
-    xmlns: string;
+    'xmlns:prod': string;
     'xmlns:xsi': string;
     'xsi:schemaLocation': string;
   }
@@ -32,7 +32,7 @@ export default class GPX {
     $?: {
       version: string,
       creator: string,
-      xmlns: string,
+      'xmlns:prod': string,
       'xmlns:xsi': string,
       'xsi:schemaLocation': string,
     }
@@ -74,6 +74,7 @@ export default class GPX {
 
   getTotals() {
     let totalElevationGain = 0;
+    let totalElevationLoss = 0;
     let totalDuration = 0;
     let totalDistance = 0;
 
@@ -99,6 +100,8 @@ export default class GPX {
           const elevationDiff = elevation - previousElevation;
           if (elevationDiff > 0) {
             totalElevationGain += elevationDiff;
+          } else {
+            totalElevationLoss += Math.abs(elevationDiff)
           }
 
           const distance = calculateDistance(
@@ -112,7 +115,7 @@ export default class GPX {
       }
     }
 
-    return { distance: totalDistance, elevationGain: totalElevationGain, duration: totalDuration }
+    return { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss, duration: totalDuration }
   }
 
   static parse(gpxString: string): Promise<GPX | Error> {
@@ -144,8 +147,10 @@ export default class GPX {
     options = options || {};
     options.rootName = 'gpx';
 
-    const builder = new xml2js.Builder(options), gpx = new GPX(this);
+    const builder = new xml2js.Builder(options)
+    const gpx = new GPX(this);
     allDatesToISOString(gpx);
-    return builder.buildObject(gpx);
+
+    return builder.buildObject(gpx).replace('xmlns:prod', 'xmlns');
   }
 }

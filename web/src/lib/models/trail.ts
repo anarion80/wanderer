@@ -2,6 +2,7 @@ import type { Category } from "./category";
 import type { Comment } from "./comment";
 import type { SummitLog } from "./summit_log";
 import type { TrailShare } from "./trail_share";
+import type { UserAnonymous } from "./user";
 import type { Waypoint } from "./waypoint";
 
 class Trail {
@@ -12,6 +13,7 @@ class Trail {
     public: boolean;
     distance?: number;
     elevation_gain?: number;
+    elevation_loss?: number;
     duration?: number;
     difficulty?: "easy" | "moderate" | "difficult"
     lat?: number;
@@ -27,6 +29,7 @@ class Trail {
         category?: Category;
         waypoints: Waypoint[]
         summit_logs: SummitLog[]
+        author?: UserAnonymous
         comments_via_trail: Comment[]
         gpx_data?: string
         trail_share_via_trail?: TrailShare[]
@@ -43,6 +46,7 @@ class Trail {
             public?: boolean,
             distance?: number,
             elevation_gain?: number,
+            elevation_loss?: number,
             duration?: number,
             difficulty?: "easy" | "moderate" | "difficult",
             lat?: number,
@@ -68,6 +72,7 @@ class Trail {
         this.public = params?.public ?? false
         this.distance = params?.distance;
         this.elevation_gain = params?.elevation_gain;
+        this.elevation_loss = params?.elevation_loss;
         this.duration = params?.duration;
         this.difficulty = params?.difficulty ?? "easy";
         this.lat = params?.lat;
@@ -94,6 +99,9 @@ interface TrailFilter {
     q: string,
     category: string[],
     difficulty: ("easy" | "moderate" | "difficult")[]
+    author?: string;
+    public?: boolean;
+    shared?: boolean;
     near: {
         lat?: number,
         lon?: number,
@@ -105,6 +113,9 @@ interface TrailFilter {
     elevationGainMin: number;
     elevationGainMax: number;
     elevationGainLimit: number;
+    elevationLossMin: number;
+    elevationLossMax: number;
+    elevationLossLimit: number;
     startDate?: string;
     endDate?: string;
     completed?: boolean;
@@ -117,6 +128,8 @@ interface TrailFilterValues {
     max_distance: number,
     min_elevation_gain: number,
     max_elevation_gain: number,
+    min_elevation_loss: number,
+    max_elevation_loss: number,
     min_durtation: number,
     max_duration: number,
 }
@@ -130,4 +143,4 @@ interface TrailBoundingBox {
 
 export { Trail };
 
-export type { TrailFilter, TrailFilterValues, TrailBoundingBox };
+    export type { TrailBoundingBox, TrailFilter, TrailFilterValues };

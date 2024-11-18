@@ -8,7 +8,7 @@
     import TrailCard from "./trail_card.svelte";
     import TrailListItem from "./trail_list_item.svelte";
 
-    export let filter: TrailFilter;
+    export let filter: TrailFilter | null = null;
     export let trails: Trail[];
     export let pagination: { page: number; totalPages: number } = {
         page: 1,
@@ -31,23 +31,24 @@
         { text: $_("difficulty"), value: "difficulty" },
         { text: $_("distance"), value: "distance" },
         { text: $_("elevation-gain"), value: "elevation_gain" },
+        { text: $_("elevation-loss"), value: "elevation_loss" },
     ];
 
     onMount(() => {
         const storedDisplayOption = localStorage.getItem("displayOption");
-        const storedSort= localStorage.getItem("sort");
-        const storedSortOrder= localStorage.getItem("sort_order");
+        const storedSort = localStorage.getItem("sort");
+        const storedSortOrder = localStorage.getItem("sort_order");
 
         if (storedDisplayOption) {
             selectedDisplayOption = storedDisplayOption;
         }
-        if(storedSort) {
-            filter.sort = storedSort as typeof filter.sort
+        if (filter && storedSort) {
+            filter.sort = storedSort as typeof filter.sort;
         }
-        if(storedSortOrder) {
-            filter.sortOrder = storedSortOrder as typeof filter.sortOrder
+        if (filter && storedSortOrder) {
+            filter.sortOrder = storedSortOrder as typeof filter.sortOrder;
         }
-        if(storedSort || storedSortOrder) {                        
+        if (storedSort || storedSortOrder) {
             dispatch("update", filter);
         }
     });
@@ -57,17 +58,23 @@
     }
 
     function setSort() {
-        localStorage.setItem("sort", filter.sort)
+        if(!filter) {
+            return;
+        }
+        localStorage.setItem("sort", filter.sort);
         dispatch("update", filter);
     }
 
     function setSortOrder() {
+        if(!filter) {
+            return;
+        }
         if (filter.sortOrder === "+") {
             filter.sortOrder = "-";
         } else {
             filter.sortOrder = "+";
         }
-        localStorage.setItem("sort_order", filter.sortOrder)
+        localStorage.setItem("sort_order", filter.sortOrder);
         dispatch("update", filter);
     }
 </script>
@@ -81,23 +88,25 @@
                 on:pagination
             ></Pagination>
         </div>
-        <div class="shrink-0">
-            <p class="text-sm text-gray-500 pb-2">{$_("sort")}</p>
-            <div class="flex items-center gap-2">
-                <Select
-                    bind:value={filter.sort}
-                    items={sortOptions}
-                    on:change={setSort}
-                ></Select>
-                <button
-                    id="sort-order-btn"
-                    class="btn-icon"
-                    class:rotated={filter.sortOrder == "-"}
-                    on:click={() => setSortOrder()}
-                    ><i class="fa fa-arrow-up"></i></button
-                >
+        {#if filter}
+            <div class="shrink-0">
+                <p class="text-sm text-gray-500 pb-2">{$_("sort")}</p>
+                <div class="flex items-center gap-2">
+                    <Select
+                        bind:value={filter.sort}
+                        items={sortOptions}
+                        on:change={setSort}
+                    ></Select>
+                    <button
+                        id="sort-order-btn"
+                        class="btn-icon"
+                        class:rotated={filter.sortOrder == "-"}
+                        on:click={() => setSortOrder()}
+                        ><i class="fa fa-arrow-up"></i></button
+                    >
+                </div>
             </div>
-        </div>
+        {/if}
         <div class="shrink-0">
             <p class="text-sm text-gray-500 pb-2">{$_("display-as")}</p>
 
@@ -130,6 +139,11 @@
             </a>
         {/each}
     </div>
+    <Pagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        on:pagination
+    ></Pagination>
 </div>
 
 <style>

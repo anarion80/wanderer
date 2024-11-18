@@ -2,7 +2,11 @@
     import { page } from "$app/stores";
     import { Settings } from "$lib/models/settings";
     import type { Trail } from "$lib/models/trail";
-    import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
+    import {
+        createMarkerFromWaypoint,
+        endIcon,
+        startIcon,
+    } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
     import type AutoGraticule from "$lib/vendor/leaflet-graticule/leaflet-auto-graticule";
     import type { Map, Marker } from "leaflet";
@@ -32,7 +36,7 @@
             autofitBounds: options.autofitBounds ?? true,
         });
         controlElevation.clear();
-        controlElevation.load(gpxData);
+        controlElevation.load(gpxData);        
     }
 
     $: if (options) {
@@ -103,22 +107,25 @@
         const baseMaps: Record<string, L.TileLayer> = {
             OpenStreetMaps: baseLayer,
             OpenTopoMaps: topoLayer,
-            ...($page.data.settings as Settings).tilesets?.reduce<
+            ...($page.data.settings as Settings)?.tilesets?.reduce<
                 Record<string, string>
             >((t, current) => {
                 t[current.name] = L.tileLayer(current.url);
                 return t;
             }, {}),
-        };        
+        };
 
         L.control.layers(baseMaps).addTo(map);
 
-        const layerPreference = localStorage.getItem("layer")
+        const layerPreference = localStorage.getItem("layer");
 
-        if (layerPreference && Object.keys(baseMaps).includes(layerPreference)) {
-            baseMaps[layerPreference].addTo(map!)
-        }else {
-            baseLayer.addTo(map)
+        if (
+            layerPreference &&
+            Object.keys(baseMaps).includes(layerPreference)
+        ) {
+            baseMaps[layerPreference].addTo(map!);
+        } else {
+            baseLayer.addTo(map);
         }
 
         map!.on("baselayerchange", function (e) {
@@ -138,7 +145,7 @@
             closeBtn: false,
             followMarker: true,
             autofitBounds: true,
-            imperial: $page.data.settings?.unit == "imperial" ?? false,
+            imperial: ($page.data.settings?.unit ?? "metric") == "imperial",
             reverseCoords: false,
             acceleration: false,
             slope: true,
@@ -173,22 +180,10 @@
             trkStart: {
                 interactive: false,
                 className: "hihi",
-                icon: L.AwesomeMarkers.icon({
-                    icon: "circle-half-stroke",
-                    prefix: "fa",
-                    markerColor: "cadetblue",
-                    iconColor: "white",
-                    className: "awesome-marker pointer-events-none",
-                }),
+                icon: startIcon(),
             },
             trkEnd: {
-                icon: L.AwesomeMarkers.icon({
-                    icon: "flag-checkered",
-                    prefix: "fa",
-                    markerColor: "cadetblue",
-                    iconColor: "white",
-                    className: "awesome-marker pointer-events-none",
-                }),
+                icon: endIcon(),
             },
             graticule: false,
             drawing: false,
@@ -225,7 +220,7 @@
     }
 </script>
 
-<div id="map-container" class="flex flex-col h-full">
+<div id="map-container" class="flex flex-col h-full relative">
     <div
         id="map"
         class="rounded-xl z-0 basis-full min-h-96 md:min-h-0"

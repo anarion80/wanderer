@@ -18,6 +18,7 @@
     ];
 
     const dropdownItems = [
+        { text: $_("profile"), value: "profile", icon: "user" },
         { text: $_("settings"), value: "settings", icon: "cog" },
         { text: $_("logout"), value: "logout", icon: "right-from-bracket" },
     ];
@@ -76,7 +77,9 @@
     });
 
     function handleDropdownClick(item: { text: string; value: any }) {
-        if (item.value == "logout") {
+        if (item.value == "profile") {
+            goto(`/profile/${$currentUser?.id}`);
+        } else if (item.value == "logout") {
             logout();
             window.location.href = "/";
         } else if (item.value == "settings") {
@@ -124,8 +127,8 @@
             >
             <div class="basis-full"></div>
             <hr class="border-input-border" />
-            <div class="flex gap-4 items-center m-4">
-                <a href="/profile">
+            <div class="flex gap-4 items-center justify-between m-4">
+                <a href="/profile/{$currentUser.id}">
                     <img
                         class="rounded-full w-10 aspect-square"
                         src={getFileURL($currentUser, $currentUser.avatar) ||
@@ -133,7 +136,7 @@
                         alt="avatar"
                     />
                 </a>
-                <a href="/profile">
+                <a href="/profile/{$currentUser.id}">
                     <p class="text-sm">{$currentUser.username}</p>
                     <p class="text-sm text-gray-500">
                         {$currentUser.email}

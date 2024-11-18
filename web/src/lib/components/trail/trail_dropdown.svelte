@@ -23,7 +23,7 @@
     import { pb } from "$lib/pocketbase";
 
     export let trail: Trail;
-    export let mode: "overview" | "map";
+    export let mode: "overview" | "map" | "list";
 
     let openConfirmModal: () => void;
     let openListSelectModal: () => void;
@@ -54,7 +54,9 @@
               ]
             : []),
         { text: $_("print"), value: "print", icon: "print" },
-        { text: $_("add-to-list"), value: "list", icon: "bookmark" },
+        ...(trail.author != pb.authStore.model?.id
+            ? []
+            : [{ text: $_("add-to-list"), value: "list", icon: "bookmark" }]),
         ...(trail.author != pb.authStore.model?.id
             ? []
             : [{ text: $_("share"), value: "share", icon: "share" }]),
@@ -107,31 +109,41 @@
                     gpx(new DOMParser().parseFromString(fileData, "text/xml")),
                 );
             }
-            const zip = new JSZip();
-            zip.file(`${trail.name}.${exportSettings.fileFormat}`, fileData);
-            if (exportSettings.photos) {
-                const photoFolder = zip.folder($_("photos"));
-                for (const photo of trail.photos) {
-                    const photoURL = getFileURL(trail, photo);
-                    const photoBlob = await fetch(photoURL).then((response) =>
-                        response.blob(),
-                    );
-                    const photoData = new File([photoBlob], photo);
-                    photoFolder?.file(photo, photoData, { base64: true });
-                }
-            }
-            if (exportSettings.summitLog) {
-                let summitLogString = "";
-                for (const summitLog of trail.expand.summit_logs) {
-                    summitLogString += `${summitLog.date},${summitLog.text}\n`;
-                }
+            if (!exportSettings.photos && !exportSettings.summitLog) {
+                const blob = new Blob([fileData], {
+                    type: "text/plain",
+                });
+                saveAs(blob, `${trail.name}.${exportSettings.fileFormat}`);
+            } else {
+                const zip = new JSZip();
                 zip.file(
-                    `${trail.name} - ${$_("summit-book")}.csv`,
-                    summitLogString,
+                    `${trail.name}.${exportSettings.fileFormat}`,
+                    fileData,
                 );
+                if (exportSettings.photos) {
+                    const photoFolder = zip.folder($_("photos"));
+                    for (const photo of trail.photos) {
+                        const photoURL = getFileURL(trail, photo);
+                        const photoBlob = await fetch(photoURL).then(
+                            (response) => response.blob(),
+                        );
+                        const photoData = new File([photoBlob], photo);
+                        photoFolder?.file(photo, photoData, { base64: true });
+                    }
+                }
+                if (exportSettings.summitLog) {
+                    let summitLogString = "";
+                    for (const summitLog of trail.expand.summit_logs) {
+                        summitLogString += `${summitLog.date},${summitLog.text}\n`;
+                    }
+                    zip.file(
+                        `${trail.name} - ${$_("summit-book")}.csv`,
+                        summitLogString,
+                    );
+                }
+                const blob = await zip.generateAsync({ type: "blob" });
+                saveAs(blob, `${trail.name}.zip`);
             }
-            const blob = await zip.generateAsync({ type: "blob" });
-            saveAs(blob, `${trail.name}.zip`);
         } catch (e) {
             console.error(e);
             show_toast({

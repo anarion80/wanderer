@@ -9,14 +9,28 @@ export async function GET(event: RequestEvent) {
         const r = await pb.collection('trails')
             .getOne<Trail>(event.params.id as string, { expand: expand ?? "" })
 
+
+        if (pb.authStore.model) {
+            if (!r.expand) {
+                r.expand = {} as any
+            }
+            r.expand.author = await pb.collection("users_anonymous").getOne(r.author!);
+        }
+
         // remove time from dates
         r.date = r.date?.substring(0, 10) ?? ""
         for (const log of r.expand?.summit_logs ?? []) {
             log.date = log.date.substring(0, 10)
+
+            if (!log.expand) {
+                log.expand = {} as any
+            }
+            log.expand.author = await pb.collection("users_anonymous").getOne(log.author!);
         }
         return json(r)
-    } catch (e: any) {       
-        throw error(e.status || 500, e);
+    } catch (e: any) {
+        console.error(e)
+        throw error(e.status || 500, e);
     }
 }
 

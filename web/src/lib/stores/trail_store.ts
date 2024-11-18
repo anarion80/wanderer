@@ -56,7 +56,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
 
     r = await f('/api/v1/trail?' + new URLSearchParams({
         expand: "category,waypoints,summit_logs,trail_share_via_trail",
-        filter: trailIds.map((id: Record<string, any>) => `id="${id}"`).join('||'),
+        filter: `'${trailIds.join(',')}'~id`,
         sort: `${filter.sortOrder}${filter.sort}`
     }), {
         method: 'GET',
@@ -101,7 +101,7 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
     }
 
     r = await fetch('/api/v1/trail?' + new URLSearchParams({
-        filter: trailIds.map((id: Record<string, any>) => `id="${id}"`).join("||"),
+        filter: `'${trailIds.join(',')}'~id`,
         expand: "category,waypoints,summit_logs",
         sort: `+name`,
     }), {
@@ -120,7 +120,9 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
 
         const comparison = compareObjectArrays<Trail>(get(trails), response.items)
 
-        trails.set(response.items);
+        if (comparison.added.length || comparison.deleted.length || comparison.updated.length) {
+            trails.set(response.items);
+        }
 
         return comparison;
     } else {
@@ -150,14 +152,24 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
             response.expand = {};
         }
         response.expand.gpx_data = gpxData;
+
+
+        for (const log of response.expand.summit_logs ?? []) {
+            const gpxData: string = await fetchGPX(log, f);
+
+            if (!log.expand) {
+                log.expand = {};
+            }
+            log.expand.gpx_data = gpxData;
+        }
     }
 
     response.expand.waypoints = response.expand.waypoints || [];
-    response.expand.summit_logs = response.expand.summit_logs || [];
+    response.expand.summit_logs = response.expand.summit_logs?.sort((a: SummitLog, b: SummitLog) => Date.parse(a.date) - Date.parse(b.date)) || [];
 
     trail.set(response);
 
-    return response;
+    return response as Trail;
 }
 
 export async function trails_create(trail: Trail, photos: File[], gpx: File | Blob | null, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
@@ -174,7 +186,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         trail.waypoints.push(model.id!);
     }
     for (const summitLog of trail.expand.summit_logs) {
-        const model = await summit_logs_create(summitLog);
+        const model = await summit_logs_create(summitLog, f);
         trail.summit_logs.push(model.id!);
     }
 
@@ -344,12 +356,14 @@ export async function trails_get_bounding_box(f: (url: RequestInfo | URL, config
 }
 
 export async function trails_upload(file: File, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<TrailFilterValues> {
+    const fd = new FormData()
+
+    fd.append("name", file.name),
+        fd.append("file", file)
+
     const r = await f('/api/v1/trail/upload', {
-        headers: {
-            "Content-Type": "multipart/form-data"
-        },
         method: 'PUT',
-        body: file
+        body: fd
     })
 
     if (r.ok) {
@@ -359,7 +373,7 @@ export async function trails_upload(file: File, f: (url: RequestInfo | URL, conf
     }
 }
 
-export async function fetchGPX(trail: Trail, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function fetchGPX(trail: { gpx?: string } & Record<string, any>, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     if (!trail.gpx) {
         return "";
     }
@@ -373,7 +387,7 @@ export async function fetchGPX(trail: Trail, f: (url: RequestInfo | URL, config?
 function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
     let filterText: string = "";
 
-    filterText += `distance >= ${Math.floor(filter.distanceMin)} AND elevation_gain >= ${Math.floor(filter.elevationGainMin)}`
+    filterText += `distance >= ${Math.floor(filter.distanceMin)} AND elevation_gain >= ${Math.floor(filter.elevationGainMin)} AND elevation_loss >= ${Math.floor(filter.elevationLossMin)}`
 
     if (filter.distanceMax < filter.distanceLimit) {
         filterText += ` AND distance <= ${Math.ceil(filter.distanceMax)}`
@@ -383,7 +397,39 @@ function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
         filterText += ` AND elevation_gain <= ${Math.ceil(filter.elevationGainMax)}`
     }
 
-    filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
+    if (filter.elevationLossMax < filter.elevationLossLimit) {
+        filterText += ` AND elevation_loss <= ${Math.ceil(filter.elevationLossMax)}`
+    }
+
+    if (filter.difficulty.length > 0) {
+        filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
+    }
+
+    if (filter.author?.length) {
+        filterText += ` AND author = ${filter.author}`
+    }
+
+    if (filter.public !== undefined || filter.shared !== undefined) {
+        filterText += " AND ("
+        if (filter.public !== undefined) {
+            filterText += `(public = ${filter.public}`
+
+            if (!filter.author?.length || filter.author == pb.authStore.model?.id) {
+                filterText += ` OR author = ${pb.authStore.model?.id}`
+            }
+            filterText += ")"
+        }
+
+        if (filter.shared !== undefined) {
+            if (filter.shared === true) {
+                filterText += ` OR shares = ${pb.authStore.model?.id}`
+            } else {
+                filterText += ` AND NOT shares = ${pb.authStore.model?.id}`
+
+            }
+        }
+        filterText += ")"
+    }
 
     if (filter.startDate) {
         filterText += ` AND date >= ${new Date(filter.startDate).getTime() / 1000}`

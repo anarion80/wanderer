@@ -30,7 +30,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 		Object.assign(this.options, options)
 		if (!this.options.showStartEnd) {
 			this._circleMarkers.remove();
-		} else if (this._data.length) {
+		} else if (this._data.length && this._map) {
 			this._circleMarkers.addTo(this._map);
 		}
 	},
@@ -38,18 +38,17 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 	/*
 	 * Add data to the diagram either from GPX or GeoJSON and update the axis domain and data
 	 */
-	addData(d, layer) {
-		this.import(this.__D3)
-			.then(() => {
-				if (this._modulesLoaded) {
-					layer = layer ?? (d.on && d);
-					this._addData(d);
-					this._addLayer(layer);
-					this._fireEvt("eledata_added", { data: d, layer: layer, track_info: this.track_info });
-				} else {
-					this.once('modules_loaded', () => this.addData(d, layer));
-				}
-			});
+	async addData(d, layer) {
+		await this.import(this.__D3)
+
+		if (this._modulesLoaded) {
+			layer = layer ?? (d.on && d);
+			this._addData(d);
+			this._addLayer(layer);
+			this._fireEvt("eledata_added", { data: d, layer: layer, track_info: this.track_info });
+		} else {
+			this.once('modules_loaded', () => this.addData(d, layer));
+		}
 	},
 
 	/**
@@ -446,14 +445,18 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 			}) : Promise.resolve();
 	},
 
-	_initHotLine(layer) {
+	_initHotLine(layer, target = this._hotline) {
 		let prop = typeof this.options.hotline == 'string' ? this.options.hotline : 'elevation';
 		return this.options.hotline ? this.import(/* @vite-ignore */this.__LHOTLINE)
 			.then(() => {
+				const map = this._map
+				map.createPane('hotline');
+				map.getPane('hotline').style.pointerEvents = 'none';
+
 				layer.eachLayer((trkseg) => {
 					if (trkseg.feature.geometry.type != "Point") {
 						let line = L.hotline(this._data.map(m => [m.x, m.y, m[prop] || 0]), {
-							renderer: L.Hotline.renderer(),
+							renderer: L.Hotline.renderer({pane: "hotline"}),
 							min: isFinite(this.track_info[prop + '_min']) ? this.track_info[prop + '_min'] : 0,
 							max: isFinite(this.track_info[prop + '_max']) ? this.track_info[prop + '_max'] : 1,
 							palette: {
@@ -464,7 +467,8 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 							weight: 5,
 							outlineColor: '#000000',
 							outlineWidth: 1
-						}).addTo(this._hotline);
+						}).addTo(target);
+												
 						let alpha = trkseg.options.style && trkseg.options.style.opacity || 1;
 						trkseg.on('add remove', ({ type }) => {
 							trkseg.setStyle({ opacity: (type == 'add' ? 0 : alpha) });
@@ -536,16 +540,20 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 
 		L.Canvas.include({
 			_fillStroke(ctx, layer) {
-				if (control._layers.hasLayer(layer)) {
+				let options = layer.options;
 
-					let options = layer.options;
 
-					options.color = color.line || color.area || theme;
+				if (control._layers.hasLayer(layer) || options.isGroupLayer) {
+
+
+					if (!options.isGroupLayer) {
+						options.color = color.line || color.area || theme;
+					}
 					options.stroke = !!options.color;
 
 					oldProto.call(this, ctx, layer);
 
-					if (options.stroke && options.weight !== 0) {
+					if (!options.highlighted && options.stroke && options.weight !== 0) {
 						let oldVal = ctx.globalCompositeOperation || 'source-over';
 						ctx.globalCompositeOperation = 'destination-over'
 						ctx.strokeStyle = color.outline || '#FFF';
@@ -808,7 +816,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 				}
 			},
 			onEachFeature: (feature, layer) => feature.geometry && feature.geometry.type != 'Point' && this.addData(feature, layer),
-		});
+		});		
 
 		this.import(this.__D3).then(() => {
 			this._initMapIntegrations(layer);
